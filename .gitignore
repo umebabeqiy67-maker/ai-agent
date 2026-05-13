@@ -1,0 +1,22 @@
+# dependencies
+**/node_modules/
+
+# Next.js
+**/.next/
+**/out/
+**/build/
+
+# local env
+**/.env*
+!**/.env.example
+
+# local app data
+**/data/
+
+# logs and caches
+*.log
+*.tsbuildinfo
+.DS_Store
+
+# Vercel
+**/.vercel/

@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>任务与知识库 Agent 原型</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1f232c;
+      --panel-3: #252a35;
+      --line: #303642;
+      --text: #f3f0e8;
+      --muted: #a8adba;
+      --soft: #777f90;
+      --mint: #7dd3c7;
+      --green: #a3e635;
+      --amber: #f6c76f;
+      --rose: #fb7185;
+      --violet: #b8a1ff;
+      --shadow: 0 22px 70px rgba(0, 0, 0, .35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(125, 211, 199, .14), transparent 26%),
+        radial-gradient(circle at 86% 12%, rgba(184, 161, 255, .13), transparent 30%),
+        linear-gradient(135deg, #0f1115 0%, #13161d 48%, #101318 100%);
+      min-height: 100vh;
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 260px minmax(520px, 1fr) 360px;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      padding: 22px 18px;
+      border-right: 1px solid rgba(255,255,255,.08);
+      background: rgba(17, 19, 25, .82);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--mint), var(--violet));
+      box-shadow: 0 12px 35px rgba(125, 211, 199, .22);
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav button {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 11px 12px;
+      color: var(--muted);
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .nav button.active {
+      color: var(--text);
+      background: rgba(255,255,255,.07);
+      border-color: rgba(255,255,255,.08);
+    }
+
+    .nav .count {
+      color: var(--soft);
+      font-size: 12px;
+    }
+
+    .sidebar-card {
+      margin-top: 28px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 18px;
+      background: rgba(255,255,255,.055);
+    }
+
+    .sidebar-card h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+    }
+
+    .sidebar-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: rgba(15, 17, 21, .45);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .topbar p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.055);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(163, 230, 53, .11);
+    }
+
+    .chat {
+      flex: 1;
+      padding: 26px 24px;
+      overflow: auto;
+    }
+
+    .message {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 720px);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #111318;
+      font-weight: 800;
+      background: var(--mint);
+    }
+
+    .avatar.user {
+      color: var(--text);
+      background: var(--panel-3);
+      border: 1px solid rgba(255,255,255,.09);
+    }
+
+    .bubble {
+      padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
+      background: rgba(255,255,255,.055);
+      box-shadow: 0 14px 40px rgba(0,0,0,.12);
+    }
+
+    .bubble p {
+      margin: 0;
+      color: #eeeef2;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .bubble .meta {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tool-card {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(125, 211, 199, .2);
+      border-radius: 14px;
+      background: rgba(125, 211, 199, .07);
+    }
+
+    .tool-card strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .tool-card span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .composer {
+      padding: 18px 24px 24px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .composer-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px;
+      background: rgba(255,255,255,.07);
+      box-shadow: var(--shadow);
+    }
+
+    textarea {
+      min-height: 48px;
+      max-height: 120px;
+      resize: none;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      padding: 10px;
+    }
+
+    textarea::placeholder {
+      color: var(--soft);
+    }
+
+    .send {
+      align-self: end;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      color: #111318;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--mint), #d9f99d);
+      cursor: pointer;
+    }
+
+    .context {
+      padding: 18px;
+      border-left: 1px solid rgba(255,255,255,.08);
+      background: rgba(17, 19, 25, .86);
+      backdrop-filter: blur(18px);
+      overflow: auto;
+    }
+
+    .section {
+      margin-bottom: 18px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 18px;
+      background: rgba(255,255,255,.05);
+    }
+
+    .section h2 {
+      margin: 0 0 12px;
+      font-size: 13px;
+    }
+
+    .task {
+      display: grid;
+      gap: 6px;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .task:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .task strong {
+      font-size: 13px;
+    }
+
+    .task span, .cite, .run-row {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .cite {
+      padding: 10px 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .cite:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .run-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .run-row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    @media (max-width: 1120px) {
+      .app {
+        grid-template-columns: 86px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        padding: 16px 10px;
+      }
+
+      .brand div, .nav span.label, .sidebar-card, .nav .count {
+        display: none;
+      }
+
+      .nav button {
+        justify-content: center;
+      }
+
+      .context {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .message {
+        grid-template-columns: 1fr;
+      }
+
+      .avatar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <strong>Agent Workspace</strong>
+          <span>Tasks + Knowledge</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="active"><span class="label">Chat</span><span class="count">12</span></button>
+        <button><span class="label">Documents</span><span class="count">8</span></button>
+        <button><span class="label">Tasks</span><span class="count">23</span></button>
+        <button><span class="label">Agent Runs</span><span class="count">41</span></button>
+        <button><span class="label">Settings</span><span class="count"></span></button>
+      </nav>
+
+      <div class="sidebar-card">
+        <h3>今日状态</h3>
+        <p>3 个任务待安排，2 份文档已完成索引。Agent 本轮使用 DeepSeek Chat。</p>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h1>任务与知识库 Agent</h1>
+          <p>把资料、任务和计划放在同一个 AI 工作台里处理。</p>
+        </div>
+        <div class="toolbar">
+          <span class="pill"><span class="dot"></span>Ready</span>
+          <span class="pill">DeepSeek Chat</span>
+          <span class="pill">pgvector</span>
+        </div>
+      </header>
+
+      <section class="chat">
+        <article class="message">
+          <div class="avatar user">你</div>
+          <div class="bubble">
+            <p>帮我基于刚上传的 AI Agent 学习资料，整理今天最适合推进的任务，不要超过 4 项。</p>
+          </div>
+        </article>
+
+        <article class="message">
+          <div class="avatar">A</div>
+          <div class="bubble">
+            <p>我先检索了你上传的路线文档和项目计划，然后把今天适合推进的内容压缩成 4 个可执行任务。建议先完成产品骨架和工具 schema，因为它们会影响后续所有 Agent 项目的复用。</p>
+            <div class="tool-card">
+              <strong>searchDocs(query: "任务与知识库 Agent 开发计划")</strong>
+              <span>命中 5 个片段，来源：07-task-knowledge-agent-dev-plan.md</span>
+            </div>
+            <div class="tool-card">
+              <strong>createTask × 4</strong>
+              <span>已创建：初始化项目、设计工具 schema、搭建 Chat 页面、创建 agent_runs 表。</span>
+            </div>
+            <div class="meta">
+              <span class="pill">4 tasks created</span>
+              <span class="pill">5 citations</span>
+              <span class="pill">1.8s</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <footer class="composer">
+        <div class="composer-box">
+          <textarea placeholder="输入目标，例如：把这份文档拆成任务，或者基于我的待办生成今日计划"></textarea>
+          <button class="send">发送</button>
+        </div>
+      </footer>
+    </main>
+
+    <aside class="context">
+      <section class="section">
+        <h2>今日任务</h2>
+        <div class="task">
+          <strong>初始化 Next.js + shadcn/ui 项目</strong>
+          <span>优先级 High · 今天</span>
+        </div>
+        <div class="task">
+          <strong>定义 Agent 工具 schema</strong>
+          <span>优先级 High · 今天</span>
+        </div>
+        <div class="task">
+          <strong>搭建 Chat 工作台布局</strong>
+          <span>优先级 Medium · 今天</span>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>引用资料</h2>
+        <div class="cite">07-task-knowledge-agent-dev-plan.md：MVP 范围、工具列表、页面原型。</div>
+        <div class="cite">05-python-and-stack-choices.md：TypeScript-first 架构建议。</div>
+        <div class="cite">08-ui-skill-and-design-recommendations.md：UI 组件体系建议。</div>
+      </section>
+
+      <section class="section">
+        <h2>最近 Agent Runs</h2>
+        <div class="run-row"><span>searchDocs</span><span>128ms</span></div>
+        <div class="run-row"><span>createTask</span><span>84ms</span></div>
+        <div class="run-row"><span>generateDailyPlan</span><span>611ms</span></div>
+      </section>
+    </aside>
+  </div>
+</body>
+</html>
