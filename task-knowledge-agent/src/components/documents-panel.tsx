@@ -42,6 +42,9 @@ export function DocumentsPanel() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
 
   async function loadDocuments() {
     const response = await fetch("/api/documents", { cache: "no-store" });
@@ -66,17 +69,26 @@ export function DocumentsPanel() {
     }
 
     setIsUploading(true);
+    setNotice("");
 
     try {
       const formData = new FormData();
       formData.set("name", name);
       formData.set("content", content);
-      await fetch("/api/documents", {
+      const response = await fetch("/api/documents", {
         method: "POST",
         body: formData,
       });
+
+      if (!response.ok) {
+        const errorBody = (await response.json()) as { error?: string };
+        setNotice(errorBody.error ?? "保存失败。");
+        return;
+      }
+
       setContent("");
       await loadDocuments();
+      setNotice("已保存并切分入库。");
     } finally {
       setIsUploading(false);
     }
@@ -88,15 +100,24 @@ export function DocumentsPanel() {
     }
 
     setIsUploading(true);
+    setNotice("");
 
     try {
       const formData = new FormData();
       formData.set("file", file);
-      await fetch("/api/documents", {
+      const response = await fetch("/api/documents", {
         method: "POST",
         body: formData,
       });
+
+      if (!response.ok) {
+        const errorBody = (await response.json()) as { error?: string };
+        setNotice(errorBody.error ?? "文件上传失败。");
+        return;
+      }
+
       await loadDocuments();
+      setNotice("文件已保存并切分入库。");
     } finally {
       setIsUploading(false);
     }
@@ -107,20 +128,31 @@ export function DocumentsPanel() {
       return;
     }
 
-    const response = await fetch("/api/documents/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query, topK: 5 }),
-    });
+    setIsSearching(true);
+    setHasSearched(true);
+    setNotice("");
 
-    if (!response.ok) {
-      return;
+    try {
+      const response = await fetch("/api/documents/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query, topK: 5 }),
+      });
+
+      if (!response.ok) {
+        const errorBody = (await response.json()) as { error?: string };
+        setNotice(errorBody.error ?? "检索失败。");
+        setResults([]);
+        return;
+      }
+
+      const data = (await response.json()) as { results: SearchResult[] };
+      setResults(data.results);
+    } finally {
+      setIsSearching(false);
     }
-
-    const data = (await response.json()) as { results: SearchResult[] };
-    setResults(data.results);
   }
 
   return (
@@ -131,7 +163,7 @@ export function DocumentsPanel() {
             <div>
               <h2 className="text-base font-semibold">上传/粘贴资料</h2>
               <p className="mt-1 text-sm text-[#a8adba]">
-                支持文本、Markdown 和可按文本读取的文件。上传后会自动切 chunk 并进入检索。
+                支持 .txt、.md、.csv、.json 等文本文件。PDF 需要解析器，当前不会作为有效知识库入库。
               </p>
             </div>
             <Input
@@ -160,7 +192,7 @@ export function DocumentsPanel() {
                 选择文件
                 <input
                   type="file"
-                  accept=".txt,.md,.markdown,.json,.csv"
+                  accept=".txt,.md,.markdown,.json,.csv,.log,.html,.css,.js,.jsx,.ts,.tsx,.xml,.yaml,.yml"
                   className="hidden"
                   onChange={(event) => handleFileUpload(event.target.files?.[0])}
                 />
@@ -185,15 +217,21 @@ export function DocumentsPanel() {
                   placeholder="搜索知识库"
                 />
               </div>
-              <Button
+            <Button
                 type="button"
                 onClick={handleSearch}
+                disabled={isSearching}
                 variant="outline"
                 className="rounded-[14px] border-white/10 bg-white/[.045] text-[#f3f0e8] hover:bg-white/[.075]"
               >
-                搜索
+                {isSearching ? "搜索中" : "搜索"}
               </Button>
             </div>
+            {notice ? (
+              <div className="rounded-[14px] border border-white/10 bg-white/[.045] px-3 py-2 text-sm text-[#a8adba]">
+                {notice}
+              </div>
+            ) : null}
             <div className="grid gap-3">
               {results.length > 0 ? (
                 results.map((result) => (
@@ -212,6 +250,10 @@ export function DocumentsPanel() {
                     </p>
                   </div>
                 ))
+              ) : hasSearched ? (
+                <div className="rounded-[16px] border border-dashed border-white/10 p-5 text-sm text-[#777f90]">
+                  没有匹配的 chunk。换一个关键词，或确认文档内容确实是可检索文本。
+                </div>
               ) : (
                 <div className="rounded-[16px] border border-dashed border-white/10 p-5 text-sm text-[#777f90]">
                   上传文档后可以在这里测试检索结果。

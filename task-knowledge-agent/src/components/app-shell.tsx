@@ -4,70 +4,30 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
-  Bot,
   BrainCircuit,
   ClipboardList,
   Database,
   FileText,
   MessageSquareText,
-  MoreHorizontal,
   Settings,
-  Sparkles,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 const navItems = [
-  { label: "Chat", href: "/", count: "12", icon: MessageSquareText },
-  { label: "Documents", href: "/documents", count: "8", icon: FileText },
-  { label: "Tasks", href: "/tasks", count: "23", icon: ClipboardList },
-  { label: "Agent Runs", href: "/agent-runs", count: "41", icon: Activity },
-  { label: "Settings", href: "/settings", count: "", icon: Settings },
-];
-
-const tasks = [
-  {
-    title: "初始化 Agent Starter Kit",
-    meta: "High · 今天 · 来自开发计划",
-    status: "In progress",
-  },
-  {
-    title: "定义工具调用 schema",
-    meta: "High · 今天 · createTask / searchDocs",
-    status: "Queued",
-  },
-  {
-    title: "搭建 Agent Runs 调试台",
-    meta: "Medium · 本周 · 可追踪每一步",
-    status: "Queued",
-  },
-];
-
-const citations = [
-  "07-task-knowledge-agent-dev-plan.md · MVP 范围和工具列表",
-  "09-fast-ai-agent-production-plan.md · Starter Kit 复用策略",
-  "08-ui-skill-and-design-recommendations.md · UI skills 与视觉方向",
-];
-
-const runs = [
-  { tool: "searchDocs", time: "128ms" },
-  { tool: "createTask", time: "84ms" },
-  { tool: "generateDailyPlan", time: "611ms" },
+  { label: "Chat", href: "/", icon: MessageSquareText },
+  { label: "Documents", href: "/documents", icon: FileText },
+  { label: "Tasks", href: "/tasks", icon: ClipboardList },
+  { label: "Agent Runs", href: "/agent-runs", icon: Activity },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function AppShell({
   title,
   description,
   children,
-  rightPanel = true,
+  rightPanel = false,
   rightPanelContent,
 }: Readonly<{
   title: string;
@@ -77,6 +37,7 @@ export function AppShell({
   rightPanelContent?: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const showRightPanel = rightPanel || Boolean(rightPanelContent);
 
   return (
     <main className="h-screen overflow-hidden bg-[#0f1115] text-[#f3f0e8]">
@@ -84,7 +45,7 @@ export function AppShell({
 
       <div
         className={`relative grid h-screen min-h-0 ${
-          rightPanel
+          showRightPanel
             ? "grid-cols-[260px_minmax(520px,1fr)_360px] max-[1120px]:grid-cols-[86px_minmax(0,1fr)]"
             : "grid-cols-[260px_minmax(520px,1fr)] max-[1120px]:grid-cols-[86px_minmax(0,1fr)]"
         } max-[720px]:grid-cols-1`}
@@ -121,29 +82,11 @@ export function AppShell({
                       <Icon className="h-4 w-4" />
                       <span className="max-[1120px]:hidden">{item.label}</span>
                     </span>
-                    <span className="text-xs text-[#777f90] max-[1120px]:hidden">
-                      {item.count}
-                    </span>
                   </Link>
                 </Button>
               );
             })}
           </nav>
-
-          <Card className="mt-8 rounded-[18px] border-white/10 bg-white/[.055] text-[#f3f0e8] max-[1120px]:hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Sparkles className="h-4 w-4 text-[#7dd3c7]" />
-                今日状态
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs leading-6 text-[#a8adba]">
-                3 个任务待安排，2 份文档已完成索引。Agent 本轮使用
-                DeepSeek Chat。
-              </p>
-            </CardContent>
-          </Card>
         </aside>
 
         <section className="flex min-h-0 min-w-0 flex-col bg-[#0f1115]/45">
@@ -176,96 +119,12 @@ export function AppShell({
           {children}
         </section>
 
-        {rightPanel ? (
+        {showRightPanel ? (
           <aside className="overflow-auto border-l border-white/10 bg-[#111319]/85 p-5 backdrop-blur-xl max-[1120px]:hidden">
-            {rightPanelContent ?? <DefaultRightPanel />}
+            {rightPanelContent}
           </aside>
         ) : null}
       </div>
     </main>
-  );
-}
-
-function DefaultRightPanel() {
-  return (
-    <>
-      <SidePanel title="今日任务">
-        <div className="grid gap-3">
-          {tasks.map((task) => (
-            <Card
-              key={task.title}
-              className="rounded-[14px] border-white/10 bg-white/[.045] text-[#f3f0e8]"
-            >
-              <CardContent className="p-3">
-                <div className="text-sm font-semibold">{task.title}</div>
-                <div className="mt-1 text-xs leading-5 text-[#a8adba]">
-                  {task.meta}
-                </div>
-                <Badge
-                  variant="outline"
-                  className="mt-3 rounded-full border-white/10 text-[#a8adba]"
-                >
-                  {task.status}
-                </Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </SidePanel>
-
-      <SidePanel title="引用资料">
-        <div className="grid gap-3">
-          {citations.map((citation, index) => (
-            <div key={citation}>
-              {index > 0 ? <Separator className="mb-3 bg-white/10" /> : null}
-              <p className="text-xs leading-5 text-[#a8adba]">{citation}</p>
-            </div>
-          ))}
-        </div>
-      </SidePanel>
-
-      <SidePanel title="最近 Agent Runs">
-        <div className="grid gap-2">
-          {runs.map((run) => (
-            <div
-              key={run.tool}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[.045] px-3 py-2 text-xs text-[#a8adba]"
-            >
-              <span className="flex items-center gap-2">
-                <Bot className="h-3.5 w-3.5 text-[#7dd3c7]" />
-                {run.tool}
-              </span>
-              <span>{run.time}</span>
-            </div>
-          ))}
-        </div>
-      </SidePanel>
-    </>
-  );
-}
-
-function SidePanel({
-  title,
-  children,
-}: Readonly<{
-  title: string;
-  children: React.ReactNode;
-}>) {
-  return (
-    <Card className="mb-5 rounded-[18px] border-white/10 bg-white/[.05] text-[#f3f0e8]">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-sm">
-          {title}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-full text-[#a8adba] hover:bg-white/[.06] hover:text-[#f3f0e8]"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
   );
 }
