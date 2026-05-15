@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     {
       role: "system",
       content:
-        "你是一个任务与知识库 Agent。回答要简洁、可执行。你可以通过工具创建、查询和更新真实任务。只有当用户明确要求记录、安排、提醒、查看或修改任务时才调用工具。",
+        "你是一个任务与知识库 Agent。回答要简洁、可执行。你可以通过工具创建、查询和更新真实任务，也可以检索用户上传的文档。用户询问资料、文档、知识库、计划内容时，优先调用 searchDocs；用户明确要求记录、安排、提醒、查看或修改任务时调用任务工具。基于文档回答时要引用文档名和 chunkIndex。",
     },
     ...(body.history ?? []).filter((message) => message.content.trim()),
     {

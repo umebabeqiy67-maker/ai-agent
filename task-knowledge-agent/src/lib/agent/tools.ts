@@ -5,6 +5,7 @@ import {
   listTasks,
   updateTask,
 } from "@/lib/store/task-store";
+import { searchDocuments } from "@/lib/store/document-store";
 import { saveToolCall } from "@/lib/store/tool-call-store";
 import type { ToolDefinition } from "@/lib/ai/providers/types";
 
@@ -25,6 +26,11 @@ const updateTaskSchema = z.object({
   status: z.enum(["todo", "in_progress", "done"]).optional(),
   title: z.string().min(1).optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
+});
+
+const searchDocsSchema = z.object({
+  query: z.string().min(1),
+  topK: z.number().int().min(1).max(12).default(5),
 });
 
 export const taskToolDefinitions: ToolDefinition[] = [
@@ -117,6 +123,29 @@ export const taskToolDefinitions: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "searchDocs",
+      description:
+        "Search uploaded documents and notes when the user asks about project docs, uploaded materials, knowledge base, plans, or document content.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "Search query in the user's language.",
+          },
+          topK: {
+            type: "number",
+            description: "How many relevant chunks to return.",
+          },
+        },
+        required: ["query"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 export async function executeTool(name: string, rawArguments: unknown) {
@@ -162,6 +191,10 @@ async function runTool(name: string, rawArguments: unknown) {
 
   if (name === "updateTask") {
     return updateTask(updateTaskSchema.parse(rawArguments));
+  }
+
+  if (name === "searchDocs") {
+    return searchDocuments(searchDocsSchema.parse(rawArguments));
   }
 
   throw new Error(`Unknown tool: ${name}`);
