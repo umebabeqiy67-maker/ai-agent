@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound, Save, SlidersHorizontal } from "lucide-react";
+import { Database, Save, SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,6 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 
 export function SettingsPanel() {
-  const [provider, setProvider] = useState("deepseek");
-  const [model, setModel] = useState("deepseek-chat");
-  const [apiKey, setApiKey] = useState("");
   const [maxToolSteps, setMaxToolSteps] = useState(6);
   const [requireConfirmation, setRequireConfirmation] = useState(true);
   const [ragTopK, setRagTopK] = useState(5);
@@ -31,62 +28,33 @@ export function SettingsPanel() {
       <Card className="rounded-[20px] border-white/10 bg-white/[.055] text-[#f3f0e8]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <KeyRound className="h-4 w-4 text-[#7dd3c7]" />
-            Provider
+            <Database className="h-4 w-4 text-[#7dd3c7]" />
+            Runtime Environment
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <label className="text-xs text-[#a8adba]">Provider</label>
-            <Select value={provider} onValueChange={setProvider}>
-              <SelectTrigger className="rounded-xl border-white/10 bg-white/[.045] text-[#f3f0e8]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="deepseek">DeepSeek</SelectItem>
-                <SelectItem value="openai-compatible">
-                  OpenAI-compatible
-                </SelectItem>
-                <SelectItem value="gemini">Gemini</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-xs text-[#a8adba]">Model</label>
-            <Input
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              className="rounded-xl border-white/10 bg-white/[.045] text-[#f3f0e8]"
-              placeholder="deepseek-chat"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-xs text-[#a8adba]">API Key</label>
-            <Input
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              type="password"
-              className="rounded-xl border-white/10 bg-white/[.045] text-[#f3f0e8]"
-              placeholder="DEEPSEEK_API_KEY"
-            />
-            <p className="text-xs leading-5 text-[#777f90]">
-              现在只是前端设置草稿。正式版本应该保存到后端环境变量或加密配置，不要把
-              API Key 暴露给浏览器。
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {[provider, model, apiKey ? "Key entered" : "No key"].map((item) => (
-              <Badge
-                key={item}
-                variant="outline"
-                className="rounded-full border-white/10 text-[#a8adba]"
-              >
-                {item}
-              </Badge>
-            ))}
+          <div className="grid gap-3 text-sm text-[#a8adba]">
+            <div className="rounded-xl border border-white/10 bg-white/[.045] p-3">
+              <div className="text-[#f3f0e8]">STORAGE_MODE</div>
+              <p className="mt-1 text-xs text-[#777f90]">
+                正式环境使用 <code>postgres</code>，测试时才显式使用{" "}
+                <code>local</code>。
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[.045] p-3">
+              <div className="text-[#f3f0e8]">DATABASE_URL</div>
+              <p className="mt-1 text-xs text-[#777f90]">
+                填 Supabase Postgres connection string，不是项目首页的
+                https URL。
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[.045] p-3">
+              <div className="text-[#f3f0e8]">DEEPSEEK_API_KEY</div>
+              <p className="mt-1 text-xs text-[#777f90]">
+                只放在 <code>.env.local</code> 或 Vercel Environment
+                Variables，不在前端页面输入。
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
