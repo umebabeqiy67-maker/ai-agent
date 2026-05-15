@@ -1,13 +1,7 @@
 import { z } from "zod";
 
-import {
-  createTask,
-  listTasks,
-  updateTask,
-} from "@/lib/store/task-store";
-import { searchDocuments } from "@/lib/store/document-store";
-import { saveToolCall } from "@/lib/store/tool-call-store";
 import type { ToolDefinition } from "@/lib/ai/providers/types";
+import { getStore } from "@/lib/store";
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -151,7 +145,7 @@ export const taskToolDefinitions: ToolDefinition[] = [
 export async function executeTool(name: string, rawArguments: unknown) {
   try {
     const result = await runTool(name, rawArguments);
-    await saveToolCall({
+    await getStore().toolCalls.save({
       name,
       arguments: rawArguments,
       result,
@@ -161,7 +155,7 @@ export async function executeTool(name: string, rawArguments: unknown) {
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown tool error";
-    await saveToolCall({
+    await getStore().toolCalls.save({
       name,
       arguments: rawArguments,
       status: "error",
@@ -181,20 +175,22 @@ export function parseToolArguments(argumentsText: string) {
 }
 
 async function runTool(name: string, rawArguments: unknown) {
+  const store = getStore();
+
   if (name === "createTask") {
-    return createTask(createTaskSchema.parse(rawArguments));
+    return store.tasks.create(createTaskSchema.parse(rawArguments));
   }
 
   if (name === "listTasks") {
-    return listTasks(listTasksSchema.parse(rawArguments));
+    return store.tasks.list(listTasksSchema.parse(rawArguments));
   }
 
   if (name === "updateTask") {
-    return updateTask(updateTaskSchema.parse(rawArguments));
+    return store.tasks.update(updateTaskSchema.parse(rawArguments));
   }
 
   if (name === "searchDocs") {
-    return searchDocuments(searchDocsSchema.parse(rawArguments));
+    return store.documents.search(searchDocsSchema.parse(rawArguments));
   }
 
   throw new Error(`Unknown tool: ${name}`);

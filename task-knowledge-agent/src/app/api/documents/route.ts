@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { createDocument, listDocuments } from "@/lib/store/document-store";
+import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const documents = await listDocuments();
+  const documents = await getStore().documents.list();
 
   return NextResponse.json({ documents });
 }
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   if (file instanceof File) {
     const text = await file.text();
-    const result = await createDocument({
+    const result = await getStore().documents.create({
       name: file.name,
       type: file.type || "text/plain",
       content: text,
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   }
 
   if (typeof content === "string" && content.trim()) {
-    const result = await createDocument({
+    const result = await getStore().documents.create({
       name: typeof name === "string" && name.trim() ? name : "Untitled note",
       type: "text/plain",
       content,

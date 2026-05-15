@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { listToolCalls } from "@/lib/store/tool-call-store";
+import { getStore } from "@/lib/store";
 
 export async function GET() {
-  const toolCalls = await listToolCalls();
+  const toolCalls = await getStore().toolCalls.list();
 
   return NextResponse.json({ toolCalls });
 }

@@ -40,4 +40,20 @@ cp .env.example .env.local
 DEEPSEEK_API_KEY=你的 key
 ```
 
-没有配置 API Key 时，项目会使用本地 mock provider，方便验证流式聊天和消息持久化。
+## 数据库配置
+
+真实项目模式使用 Supabase/Postgres：
+
+```env
+STORAGE_MODE=postgres
+DATABASE_URL=postgresql://...
+DEEPSEEK_API_KEY=...
+```
+
+建表 SQL 在：
+
+```text
+task-knowledge-agent/database/schema.sql
+```
+
+`STORAGE_MODE=local` 只作为显式测试模式，不是默认生产路径。

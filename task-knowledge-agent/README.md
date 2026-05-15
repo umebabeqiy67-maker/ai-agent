@@ -1,5 +1,30 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Project storage strategy
+
+This project uses a real storage abstraction:
+
+```text
+STORAGE_MODE=postgres  -> Supabase/Postgres, real project mode
+STORAGE_MODE=local     -> local JSON files, explicit test mode only
+```
+
+Normal development should use:
+
+```env
+STORAGE_MODE=postgres
+DATABASE_URL=postgresql://...
+DEEPSEEK_API_KEY=...
+```
+
+Before using `postgres` mode, run [database/schema.sql](./database/schema.sql) in your Supabase SQL Editor.
+
+The old local JSON behavior is still available only when you explicitly set:
+
+```env
+STORAGE_MODE=local
+```
+
 ## Getting Started
 
 First, run the development server:

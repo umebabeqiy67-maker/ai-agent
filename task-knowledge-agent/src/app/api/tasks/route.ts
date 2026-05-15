@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { listTasks } from "@/lib/store/task-store";
+import { getStore } from "@/lib/store";
 
 export async function GET() {
-  const tasks = await listTasks();
+  const tasks = await getStore().tasks.list();
 
   return NextResponse.json({ tasks });
 }

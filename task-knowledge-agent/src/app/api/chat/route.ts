@@ -1,7 +1,7 @@
 import { executeTool, parseToolArguments, taskToolDefinitions } from "@/lib/agent/tools";
 import { createDeepSeekProvider } from "@/lib/ai/providers/deepseek";
 import type { ChatMessage, ToolCall } from "@/lib/ai/providers/types";
-import { appendMessage } from "@/lib/store/chat-store";
+import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
 
@@ -22,7 +22,9 @@ export async function POST(req: Request) {
   }
 
   const conversationId = body.conversationId ?? "default";
-  await appendMessage({
+  const store = getStore();
+
+  await store.chat.appendMessage({
     conversationId,
     role: "user",
     content: userMessage,
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
     messages,
   });
 
-  await appendMessage({
+  await store.chat.appendMessage({
     conversationId,
     role: "assistant",
     content: assistantContent,

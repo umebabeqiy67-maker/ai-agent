@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentConversation } from "@/lib/store/chat-store";
+import { getStore } from "@/lib/store";
 
 export async function GET() {
-  const data = await getCurrentConversation();
+  const data = await getStore().chat.getCurrentConversation();
 
   return NextResponse.json(data);
 }
