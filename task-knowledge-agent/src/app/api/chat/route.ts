@@ -2,6 +2,7 @@ import { executeTool, parseToolArguments, taskToolDefinitions } from "@/lib/agen
 import { createDeepSeekProvider } from "@/lib/ai/providers/deepseek";
 import type { ChatMessage, ToolCall } from "@/lib/ai/providers/types";
 import { getStore } from "@/lib/store";
+import type { SearchResult } from "@/lib/store/types";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,10 @@ async function handlePost(req: Request) {
 
   const conversationId = body.conversationId ?? "default";
   const store = getStore();
+  const citations = await store.documents.search({
+    query: userMessage,
+    topK: 5,
+  });
 
   await store.chat.appendMessage({
     conversationId,
@@ -45,8 +50,7 @@ async function handlePost(req: Request) {
   const messages: ChatMessage[] = [
     {
       role: "system",
-      content:
-        "你是一个任务与知识库 Agent。回答要简洁、可执行。你可以通过工具创建、查询和更新真实任务，也可以检索用户上传的文档。用户询问资料、文档、知识库、计划内容时，优先调用 searchDocs；用户明确要求记录、安排、提醒、查看或修改任务时调用任务工具。基于文档回答时要引用文档名和 chunkIndex。",
+      content: buildSystemPrompt(citations),
     },
     ...(body.history ?? []).filter((message) => message.content.trim()),
     {
@@ -78,6 +82,33 @@ async function handlePost(req: Request) {
   });
 
   return textResponse(assistantContent);
+}
+
+function buildSystemPrompt(citations: SearchResult[]) {
+  const basePrompt =
+    "你是一个任务与知识库 Agent。回答要简洁、可执行。你可以通过工具创建、查询和更新真实任务，也可以检索用户上传的文档。用户明确要求记录、安排、提醒、查看或修改任务时调用任务工具。";
+
+  if (citations.length === 0) {
+    return [
+      basePrompt,
+      "本轮没有检索到相关知识库 chunk。用户询问资料、文档、知识库或要求基于资料回答时，必须先说明没有找到相关资料，不要编造来源；如果只是一般问题，可以明确说明未使用知识库后给出通用建议。",
+    ].join("\n");
+  }
+
+  const ragContext = citations
+    .map((citation, index) =>
+      [
+        `[S${index + 1}] ${citation.documentName} · chunk ${citation.chunkIndex}`,
+        citation.content.slice(0, 1200),
+      ].join("\n"),
+    )
+    .join("\n\n");
+
+  return [
+    basePrompt,
+    "下面是本轮从知识库检索到的资料。优先基于这些资料回答；引用资料时必须写出文档名和 chunkIndex，例如：来源：xxx.md · chunk 2。资料不足时直接说明缺口，不要编造。",
+    ragContext,
+  ].join("\n\n");
 }
 
 function formatApiError(error: unknown) {

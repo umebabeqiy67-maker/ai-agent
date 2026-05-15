@@ -68,11 +68,13 @@ export function AppShell({
   description,
   children,
   rightPanel = true,
+  rightPanelContent,
 }: Readonly<{
   title: string;
   description: string;
   children: React.ReactNode;
   rightPanel?: boolean;
+  rightPanelContent?: React.ReactNode;
 }>) {
   const pathname = usePathname();
 
@@ -176,65 +178,69 @@ export function AppShell({
 
         {rightPanel ? (
           <aside className="overflow-auto border-l border-white/10 bg-[#111319]/85 p-5 backdrop-blur-xl max-[1120px]:hidden">
-            <SidePanel title="今日任务">
-              <div className="grid gap-3">
-                {tasks.map((task) => (
-                  <Card
-                    key={task.title}
-                    className="rounded-[14px] border-white/10 bg-white/[.045] text-[#f3f0e8]"
-                  >
-                    <CardContent className="p-3">
-                      <div className="text-sm font-semibold">{task.title}</div>
-                      <div className="mt-1 text-xs leading-5 text-[#a8adba]">
-                        {task.meta}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="mt-3 rounded-full border-white/10 text-[#a8adba]"
-                      >
-                        {task.status}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </SidePanel>
-
-            <SidePanel title="引用资料">
-              <div className="grid gap-3">
-                {citations.map((citation, index) => (
-                  <div key={citation}>
-                    {index > 0 ? (
-                      <Separator className="mb-3 bg-white/10" />
-                    ) : null}
-                    <p className="text-xs leading-5 text-[#a8adba]">
-                      {citation}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </SidePanel>
-
-            <SidePanel title="最近 Agent Runs">
-              <div className="grid gap-2">
-                {runs.map((run) => (
-                  <div
-                    key={run.tool}
-                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[.045] px-3 py-2 text-xs text-[#a8adba]"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Bot className="h-3.5 w-3.5 text-[#7dd3c7]" />
-                      {run.tool}
-                    </span>
-                    <span>{run.time}</span>
-                  </div>
-                ))}
-              </div>
-            </SidePanel>
+            {rightPanelContent ?? <DefaultRightPanel />}
           </aside>
         ) : null}
       </div>
     </main>
+  );
+}
+
+function DefaultRightPanel() {
+  return (
+    <>
+      <SidePanel title="今日任务">
+        <div className="grid gap-3">
+          {tasks.map((task) => (
+            <Card
+              key={task.title}
+              className="rounded-[14px] border-white/10 bg-white/[.045] text-[#f3f0e8]"
+            >
+              <CardContent className="p-3">
+                <div className="text-sm font-semibold">{task.title}</div>
+                <div className="mt-1 text-xs leading-5 text-[#a8adba]">
+                  {task.meta}
+                </div>
+                <Badge
+                  variant="outline"
+                  className="mt-3 rounded-full border-white/10 text-[#a8adba]"
+                >
+                  {task.status}
+                </Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </SidePanel>
+
+      <SidePanel title="引用资料">
+        <div className="grid gap-3">
+          {citations.map((citation, index) => (
+            <div key={citation}>
+              {index > 0 ? <Separator className="mb-3 bg-white/10" /> : null}
+              <p className="text-xs leading-5 text-[#a8adba]">{citation}</p>
+            </div>
+          ))}
+        </div>
+      </SidePanel>
+
+      <SidePanel title="最近 Agent Runs">
+        <div className="grid gap-2">
+          {runs.map((run) => (
+            <div
+              key={run.tool}
+              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[.045] px-3 py-2 text-xs text-[#a8adba]"
+            >
+              <span className="flex items-center gap-2">
+                <Bot className="h-3.5 w-3.5 text-[#7dd3c7]" />
+                {run.tool}
+              </span>
+              <span>{run.time}</span>
+            </div>
+          ))}
+        </div>
+      </SidePanel>
+    </>
   );
 }
 

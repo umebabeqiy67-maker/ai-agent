@@ -21,7 +21,19 @@ type StoredMessage = UiMessage & {
   createdAt: string;
 };
 
-export function ChatWorkspace() {
+export type ChatCitation = {
+  id: string;
+  documentName: string;
+  chunkIndex: number;
+  content: string;
+  score: number;
+};
+
+export function ChatWorkspace({
+  onCitations,
+}: Readonly<{
+  onCitations?: (citations: ChatCitation[]) => void;
+}>) {
   const [conversationId, setConversationId] = useState("default");
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
@@ -102,6 +114,26 @@ export function ChatWorkspace() {
     setIsLoading(true);
 
     try {
+      const citationResponse = await fetch("/api/documents/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: nextMessage,
+          topK: 5,
+        }),
+      });
+
+      if (citationResponse.ok) {
+        const citationData = (await citationResponse.json()) as {
+          results: ChatCitation[];
+        };
+        onCitations?.(citationData.results);
+      } else {
+        onCitations?.([]);
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
