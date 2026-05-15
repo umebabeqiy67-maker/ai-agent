@@ -195,6 +195,20 @@ export const postgresStore: AppStore = {
         .sort((a, b) => b.score - a.score)
         .slice(0, topK);
     },
+    async delete(id) {
+      const sql = getSql();
+      const rows = await sql`
+        delete from documents
+        where id = ${id}
+        returning *
+      `;
+
+      if (!rows[0]) {
+        throw new Error(`Document not found: ${id}`);
+      }
+
+      return mapDocument(rows[0]);
+    },
   },
 };
 

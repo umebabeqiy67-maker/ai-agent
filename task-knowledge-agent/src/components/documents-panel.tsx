@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { FileText, Search, UploadCloud } from "lucide-react";
+import { FileText, Search, Trash2, UploadCloud } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ type DocumentItem = {
 
 type SearchResult = {
   id: string;
+  documentId: string;
   documentName: string;
   chunkIndex: number;
   content: string;
@@ -45,6 +46,7 @@ export function DocumentsPanel() {
   const [isSearching, setIsSearching] = useState(false);
   const [notice, setNotice] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function loadDocuments() {
     const response = await fetch("/api/documents", { cache: "no-store" });
@@ -152,6 +154,39 @@ export function DocumentsPanel() {
       setResults(data.results);
     } finally {
       setIsSearching(false);
+    }
+  }
+
+  async function handleDeleteDocument(document: DocumentItem) {
+    const confirmed = window.confirm(`删除「${document.name}」及其所有 chunks？`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingId(document.id);
+    setNotice("");
+
+    try {
+      const response = await fetch(`/api/documents/${document.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorBody = (await response.json()) as { error?: string };
+        setNotice(errorBody.error ?? "删除失败。");
+        return;
+      }
+
+      setDocuments((current) =>
+        current.filter((item) => item.id !== document.id),
+      );
+      setResults((current) =>
+        current.filter((result) => result.documentId !== document.id),
+      );
+      setNotice("文档和对应 chunks 已删除。");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -277,6 +312,9 @@ export function DocumentsPanel() {
                   <TableHead className="text-[#a8adba]">类型</TableHead>
                   <TableHead className="text-[#a8adba]">Chunks</TableHead>
                   <TableHead className="text-[#a8adba]">状态</TableHead>
+                  <TableHead className="text-right text-[#a8adba]">
+                    操作
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -302,6 +340,19 @@ export function DocumentsPanel() {
                       >
                         {doc.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={deletingId === doc.id}
+                        aria-label={`删除 ${doc.name}`}
+                        onClick={() => handleDeleteDocument(doc)}
+                        className="h-8 w-8 rounded-lg text-[#a8adba] hover:bg-red-500/10 hover:text-red-200"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

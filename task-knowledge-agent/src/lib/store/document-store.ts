@@ -90,6 +90,21 @@ export async function searchDocuments(input: { query: string; topK?: number }) {
     }));
 }
 
+export async function deleteDocument(id: string) {
+  const store = await readStore();
+  const document = store.documents.find((item) => item.id === id);
+
+  if (!document) {
+    throw new Error(`Document not found: ${id}`);
+  }
+
+  store.documents = store.documents.filter((item) => item.id !== id);
+  store.chunks = store.chunks.filter((chunk) => chunk.documentId !== id);
+  await writeStore(store);
+
+  return document;
+}
+
 async function readStore(): Promise<DocumentStoreData> {
   try {
     const raw = await readFile(STORE_FILE, "utf8");

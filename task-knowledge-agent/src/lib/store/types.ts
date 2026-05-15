@@ -104,5 +104,6 @@ export type AppStore = {
     }): Promise<{ document: StoredDocument; chunks: StoredChunk[] }>;
     list(): Promise<StoredDocument[]>;
     search(input: { query: string; topK?: number }): Promise<SearchResult[]>;
+    delete(id: string): Promise<StoredDocument>;
   };
 };

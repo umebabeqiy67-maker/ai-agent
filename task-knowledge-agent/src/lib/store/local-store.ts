@@ -22,5 +22,6 @@ export const localStore: AppStore = {
     create: documentStore.createDocument,
     list: documentStore.listDocuments,
     search: documentStore.searchDocuments,
+    delete: documentStore.deleteDocument,
   },
 };
