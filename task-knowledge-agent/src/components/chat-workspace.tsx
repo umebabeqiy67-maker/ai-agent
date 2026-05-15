@@ -116,7 +116,16 @@ export function ChatWorkspace() {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("Chat request failed.");
+        let errorMessage = "Chat request failed.";
+
+        try {
+          const errorBody = (await response.json()) as { error?: string };
+          errorMessage = errorBody.error ?? errorMessage;
+        } catch {
+          // Keep the generic message when the server did not return JSON.
+        }
+
+        throw new Error(errorMessage);
       }
 
       const reader = response.body.getReader();
@@ -160,7 +169,7 @@ export function ChatWorkspace() {
   return (
     <>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="px-6 py-7">
+        <div className="px-6 py-5">
           {hasMessages ? (
             messages.map((message) => (
               <ChatMessage key={message.id} role={message.role}>
@@ -263,25 +272,25 @@ function ChatMessage({
 
   return (
     <article
-      className={`mb-6 flex gap-4 ${
+      className={`mb-3 flex items-start gap-3 ${
         isAgent ? "justify-start" : "justify-end"
       }`}
     >
       {isAgent ? (
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] bg-[#7dd3c7] text-sm font-bold text-[#111318] max-[720px]:hidden">
-          <Bot className="h-5 w-5" />
+        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#7dd3c7] text-sm font-bold text-[#111318] max-[720px]:hidden">
+          <Bot className="h-4 w-4" />
         </div>
       ) : null}
       <Card
-        className={`max-w-[720px] rounded-[18px] border text-[#f3f0e8] shadow-[0_14px_40px_rgba(0,0,0,.12)] ${
+        className={`max-w-[min(680px,72%)] rounded-[16px] border text-[#f3f0e8] shadow-[0_10px_30px_rgba(0,0,0,.12)] max-[720px]:max-w-[86%] ${
           isAgent
             ? "border-white/10 bg-white/[.055]"
             : "border-[#7dd3c7]/25 bg-[#7dd3c7]/[.09]"
         }`}
       >
-        <CardContent className="p-4">
+        <CardContent className="px-3.5 py-2.5">
           {typeof children === "string" ? (
-            <p className="whitespace-pre-wrap text-sm leading-7 text-[#eeeef2]">
+            <p className="whitespace-pre-wrap text-sm leading-6 text-[#eeeef2]">
               {children}
             </p>
           ) : (
@@ -290,7 +299,7 @@ function ChatMessage({
         </CardContent>
       </Card>
       {!isAgent ? (
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] border border-white/10 bg-[#252a35] text-sm font-bold text-[#f3f0e8] max-[720px]:hidden">
+        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-[10px] border border-white/10 bg-[#252a35] text-xs font-bold text-[#f3f0e8] max-[720px]:hidden">
           你
         </div>
       ) : null}
