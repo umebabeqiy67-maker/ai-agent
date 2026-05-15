@@ -13,6 +13,17 @@ type ChatRequest = {
 };
 
 export async function POST(req: Request) {
+  try {
+    return await handlePost(req);
+  } catch (error) {
+    return Response.json(
+      { error: formatApiError(error) },
+      { status: 500 },
+    );
+  }
+}
+
+async function handlePost(req: Request) {
   const body = (await req.json()) as ChatRequest;
   const model = body.model ?? "deepseek-chat";
   const userMessage = body.message.trim();
@@ -67,6 +78,17 @@ export async function POST(req: Request) {
   });
 
   return textResponse(assistantContent);
+}
+
+function formatApiError(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : "Unknown server error.";
+
+  if (process.env.DATABASE_URL) {
+    return message.replaceAll(process.env.DATABASE_URL, "[DATABASE_URL]");
+  }
+
+  return message;
 }
 
 async function runLlmToolCalling({
