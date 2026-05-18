@@ -84,6 +84,16 @@ create table if not exists daily_plans (
   created_at timestamptz not null default now()
 );
 
+create table if not exists eval_runs (
+  id uuid primary key default gen_random_uuid(),
+  status text not null check (status in ('passed', 'failed')),
+  total integer not null,
+  passed integer not null,
+  failed integer not null,
+  results jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists messages_conversation_id_idx on messages(conversation_id);
 create index if not exists tasks_status_idx on tasks(status);
 create index if not exists tool_calls_created_at_idx on tool_calls(created_at desc);
@@ -92,3 +102,4 @@ create index if not exists agent_runs_created_at_idx on agent_runs(created_at de
 create index if not exists document_chunks_document_id_idx on document_chunks(document_id);
 create index if not exists document_chunks_tokens_idx on document_chunks using gin(tokens);
 create index if not exists daily_plans_created_at_idx on daily_plans(created_at desc);
+create index if not exists eval_runs_created_at_idx on eval_runs(created_at desc);

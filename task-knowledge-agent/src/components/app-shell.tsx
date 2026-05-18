@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Database,
   FileText,
+  FlaskConical,
   MessageSquareText,
   Settings,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const navItems = [
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Tasks", href: "/tasks", icon: ClipboardList },
   { label: "Agent Runs", href: "/agent-runs", icon: Activity },
+  { label: "Evals", href: "/evals", icon: FlaskConical },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

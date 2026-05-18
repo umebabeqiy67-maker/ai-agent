@@ -7,6 +7,7 @@ import type {
   StoredConversation,
   StoredDailyPlan,
   StoredDocument,
+  StoredEvalRun,
   StoredMessage,
   StoredTask,
   StoredToolCall,
@@ -187,6 +188,49 @@ export const postgresStore: AppStore = {
           toolCalls: toolCalls.filter((toolCall) => toolCall.runId === run.id),
         };
       });
+    },
+  },
+  evalRuns: {
+    async save(input) {
+      const sql = getSql();
+      await ensureEvalRunsTable();
+      const rows = await sql`
+        insert into eval_runs (status, total, passed, failed, results)
+        values (
+          ${input.status},
+          ${input.total},
+          ${input.passed},
+          ${input.failed},
+          ${JSON.stringify(input.results)}::jsonb
+        )
+        returning *
+      `;
+
+      return mapEvalRun(rows[0]);
+    },
+    async latest() {
+      const sql = getSql();
+      await ensureEvalRunsTable();
+      const rows = await sql`
+        select *
+        from eval_runs
+        order by created_at desc
+        limit 1
+      `;
+
+      return rows[0] ? mapEvalRun(rows[0]) : null;
+    },
+    async list() {
+      const sql = getSql();
+      await ensureEvalRunsTable();
+      const rows = await sql`
+        select *
+        from eval_runs
+        order by created_at desc
+        limit 20
+      `;
+
+      return rows.map(mapEvalRun);
     },
   },
   documents: {
@@ -425,6 +469,20 @@ function mapDailyPlan(row: Record<string, unknown>): StoredDailyPlan {
   };
 }
 
+function mapEvalRun(row: Record<string, unknown>): StoredEvalRun {
+  return {
+    id: String(row.id),
+    status: row.status as StoredEvalRun["status"],
+    total: Number(row.total),
+    passed: Number(row.passed),
+    failed: Number(row.failed),
+    results: Array.isArray(row.results)
+      ? (row.results as StoredEvalRun["results"])
+      : [],
+    createdAt: toIso(row.created_at),
+  };
+}
+
 async function ensureDailyPlansTable() {
   const sql = getSql();
   await sql`
@@ -468,6 +526,25 @@ async function ensureAgentRunsSchema() {
   await sql`
     create index if not exists tool_calls_run_id_idx
     on tool_calls(run_id)
+  `;
+}
+
+async function ensureEvalRunsTable() {
+  const sql = getSql();
+  await sql`
+    create table if not exists eval_runs (
+      id uuid primary key default gen_random_uuid(),
+      status text not null check (status in ('passed', 'failed')),
+      total integer not null,
+      passed integer not null,
+      failed integer not null,
+      results jsonb not null default '[]'::jsonb,
+      created_at timestamptz not null default now()
+    )
+  `;
+  await sql`
+    create index if not exists eval_runs_created_at_idx
+    on eval_runs(created_at desc)
   `;
 }
 

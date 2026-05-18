@@ -59,6 +59,27 @@ export type StoredAgentRunWithToolCalls = StoredAgentRun & {
   toolCalls: StoredToolCall[];
 };
 
+export type EvalCaseResult = {
+  id: string;
+  name: string;
+  kind: "tool" | "rag";
+  input: string;
+  expected: string;
+  actual: string;
+  passed: boolean;
+  detail?: string;
+};
+
+export type StoredEvalRun = {
+  id: string;
+  status: "passed" | "failed";
+  total: number;
+  passed: number;
+  failed: number;
+  results: EvalCaseResult[];
+  createdAt: string;
+};
+
 export type StoredDocument = {
   id: string;
   name: string;
@@ -148,6 +169,11 @@ export type AppStore = {
       durationMs: number;
     }): Promise<StoredAgentRun>;
     list(): Promise<StoredAgentRunWithToolCalls[]>;
+  };
+  evalRuns: {
+    save(input: Omit<StoredEvalRun, "id" | "createdAt">): Promise<StoredEvalRun>;
+    latest(): Promise<StoredEvalRun | null>;
+    list(): Promise<StoredEvalRun[]>;
   };
   documents: {
     create(input: {
