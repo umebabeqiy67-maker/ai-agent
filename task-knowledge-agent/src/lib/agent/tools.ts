@@ -27,6 +27,10 @@ const searchDocsSchema = z.object({
   topK: z.number().int().min(1).max(12).default(5),
 });
 
+const generateDailyPlanSchema = z.object({
+  date: z.string().optional(),
+});
+
 export const taskToolDefinitions: ToolDefinition[] = [
   {
     type: "function",
@@ -140,6 +144,25 @@ export const taskToolDefinitions: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generateDailyPlan",
+      description:
+        "Generate and save a daily plan from existing unfinished tasks when the user asks what to do today, asks for a daily plan, or wants tasks arranged into a schedule.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "Optional plan date in YYYY-MM-DD format.",
+          },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 export async function executeTool(name: string, rawArguments: unknown) {
@@ -191,6 +214,10 @@ async function runTool(name: string, rawArguments: unknown) {
 
   if (name === "searchDocs") {
     return store.documents.search(searchDocsSchema.parse(rawArguments));
+  }
+
+  if (name === "generateDailyPlan") {
+    return store.dailyPlans.generate(generateDailyPlanSchema.parse(rawArguments));
   }
 
   throw new Error(`Unknown tool: ${name}`);

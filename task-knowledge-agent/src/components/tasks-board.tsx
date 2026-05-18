@@ -31,20 +31,29 @@ type Task = {
   sourceMessage?: string;
 };
 
-const fallbackTasks: Task[] = [
-  {
-    id: "starter-1",
-    title: "明天下午提醒我整理项目计划",
-    description: "用于演示阶段 3：Agent 可以创建真实任务。",
-    status: "todo",
-    priority: "high",
-    source: "agent",
-  },
-];
+type DailyPlan = {
+  id: string;
+  date: string;
+  title: string;
+  summary: string;
+  items: Array<{
+    taskId: string;
+    title: string;
+    priority: "low" | "medium" | "high";
+    status: "todo" | "in_progress" | "done";
+    dueDate?: string;
+    slot: string;
+    rationale: string;
+  }>;
+  createdAt: string;
+};
 
 export function TasksBoard() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [notice, setNotice] = useState("");
 
   async function loadTasks() {
     setIsLoading(true);
@@ -63,12 +72,49 @@ export function TasksBoard() {
     }
   }
 
+  async function loadDailyPlan() {
+    const response = await fetch("/api/daily-plan", { cache: "no-store" });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = (await response.json()) as { plan: DailyPlan | null };
+    setDailyPlan(data.plan);
+  }
+
+  async function generateDailyPlan() {
+    setIsGeneratingPlan(true);
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/daily-plan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        setNotice("今日计划生成失败。");
+        return;
+      }
+
+      const data = (await response.json()) as { plan: DailyPlan };
+      setDailyPlan(data.plan);
+      setNotice("今日计划已生成并保存。");
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  }
+
   useEffect(() => {
     loadTasks();
+    loadDailyPlan();
   }, []);
 
-  const visibleTasks = tasks.length > 0 ? tasks : fallbackTasks;
-  const groups = useMemo(() => buildGroups(visibleTasks), [visibleTasks]);
+  const groups = useMemo(() => buildGroups(tasks), [tasks]);
 
   return (
     <>
@@ -93,9 +139,13 @@ export function TasksBoard() {
             <RefreshCcw className="h-4 w-4" />
             刷新
           </Button>
-          <Button className="rounded-[14px] bg-gradient-to-br from-[#7dd3c7] to-[#d9f99d] font-bold text-[#111318] hover:brightness-105">
+          <Button
+            onClick={generateDailyPlan}
+            disabled={isGeneratingPlan}
+            className="rounded-[14px] bg-gradient-to-br from-[#7dd3c7] to-[#d9f99d] font-bold text-[#111318] hover:brightness-105"
+          >
             <Plus className="h-4 w-4" />
-            新建任务
+            {isGeneratingPlan ? "生成中" : "生成今日计划"}
           </Button>
         </div>
       </div>
@@ -110,16 +160,23 @@ export function TasksBoard() {
               </div>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#a8adba]">
                 这里读取真实任务数据。你在 Chat 里说“明天下午提醒我整理项目计划”，Agent
-                会调用 createTask，并保存到这个页面。
+                会调用 createTask；你问“今天我该做什么”，Agent 会调用 generateDailyPlan。
               </p>
+              {notice ? (
+                <div className="mt-3 rounded-[14px] border border-white/10 bg-white/[.045] px-3 py-2 text-sm text-[#a8adba]">
+                  {notice}
+                </div>
+              ) : null}
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
-              <Metric label="Open" value={String(countOpen(visibleTasks))} />
-              <Metric label="Agent" value={String(countAgent(visibleTasks))} />
-              <Metric label="Done" value={String(countDone(visibleTasks))} />
+              <Metric label="Open" value={String(countOpen(tasks))} />
+              <Metric label="Agent" value={String(countAgent(tasks))} />
+              <Metric label="Done" value={String(countDone(tasks))} />
             </div>
           </CardContent>
         </Card>
+
+        <DailyPlanCard plan={dailyPlan} onGenerate={generateDailyPlan} isGenerating={isGeneratingPlan} />
 
         <Accordion
           type="multiple"
@@ -172,6 +229,83 @@ export function TasksBoard() {
         </Accordion>
       </div>
     </>
+  );
+}
+
+function DailyPlanCard({
+  plan,
+  onGenerate,
+  isGenerating,
+}: Readonly<{
+  plan: DailyPlan | null;
+  onGenerate: () => void;
+  isGenerating: boolean;
+}>) {
+  return (
+    <Card className="mb-5 rounded-[22px] border-white/10 bg-white/[.055] text-[#f3f0e8]">
+      <CardContent className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarDays className="h-4 w-4 text-[#7dd3c7]" />
+              今日计划
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[#a8adba]">
+              {plan?.summary ?? "还没有生成计划。会基于当前未完成任务排序并保存结果。"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={onGenerate}
+            disabled={isGenerating}
+            variant="outline"
+            className="rounded-[14px] border-white/10 bg-white/[.045] text-[#f3f0e8] hover:bg-white/[.075]"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            {isGenerating ? "生成中" : plan ? "重新生成" : "生成"}
+          </Button>
+        </div>
+
+        {plan ? (
+          <div className="mt-4 grid gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#777f90]">
+              <Badge variant="outline" className="rounded-full border-white/10 text-[#a8adba]">
+                {plan.date}
+              </Badge>
+              <span>保存于 {new Date(plan.createdAt).toLocaleString()}</span>
+            </div>
+            {plan.items.length > 0 ? (
+              plan.items.map((item) => (
+                <div
+                  key={`${plan.id}-${item.taskId}`}
+                  className="grid gap-3 rounded-[16px] border border-white/10 bg-[#111319]/70 p-4 md:grid-cols-[80px_1fr_auto]"
+                >
+                  <div className="text-sm font-semibold text-[#7dd3c7]">
+                    {item.slot}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <div className="mt-1 text-xs leading-5 text-[#a8adba]">
+                      {item.rationale}
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="h-fit rounded-full border-white/10 text-[#a8adba]"
+                  >
+                    {item.priority}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[16px] border border-dashed border-white/10 p-5 text-sm text-[#777f90]">
+                暂无可安排任务。
+              </div>
+            )}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 

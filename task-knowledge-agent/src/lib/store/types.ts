@@ -63,6 +63,25 @@ export type SearchResult = StoredChunk & {
   score: number;
 };
 
+export type DailyPlanItem = {
+  taskId: string;
+  title: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate?: string;
+  slot: string;
+  rationale: string;
+};
+
+export type StoredDailyPlan = {
+  id: string;
+  date: string;
+  title: string;
+  summary: string;
+  items: DailyPlanItem[];
+  createdAt: string;
+};
+
 export type AppStore = {
   chat: {
     getCurrentConversation(): Promise<{
@@ -105,5 +124,9 @@ export type AppStore = {
     list(): Promise<StoredDocument[]>;
     search(input: { query: string; topK?: number }): Promise<SearchResult[]>;
     delete(id: string): Promise<StoredDocument>;
+  };
+  dailyPlans: {
+    generate(input?: { date?: string }): Promise<StoredDailyPlan>;
+    latest(): Promise<StoredDailyPlan | null>;
   };
 };

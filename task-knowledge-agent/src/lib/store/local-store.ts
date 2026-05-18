@@ -1,4 +1,5 @@
 import * as chatStore from "@/lib/store/chat-store";
+import * as dailyPlanStore from "@/lib/store/daily-plan-store";
 import * as documentStore from "@/lib/store/document-store";
 import * as taskStore from "@/lib/store/task-store";
 import * as toolCallStore from "@/lib/store/tool-call-store";
@@ -23,5 +24,9 @@ export const localStore: AppStore = {
     list: documentStore.listDocuments,
     search: documentStore.searchDocuments,
     delete: documentStore.deleteDocument,
+  },
+  dailyPlans: {
+    generate: dailyPlanStore.generateDailyPlan,
+    latest: dailyPlanStore.getLatestDailyPlan,
   },
 };

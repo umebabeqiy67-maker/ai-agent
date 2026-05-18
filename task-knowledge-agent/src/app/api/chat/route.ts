@@ -86,7 +86,7 @@ async function handlePost(req: Request) {
 
 function buildSystemPrompt(citations: SearchResult[]) {
   const basePrompt =
-    "你是一个任务与知识库 Agent。回答要简洁、可执行。你可以通过工具创建、查询和更新真实任务，也可以检索用户上传的文档。用户明确要求记录、安排、提醒、查看或修改任务时调用任务工具。";
+    "你是一个任务与知识库 Agent。回答要简洁、可执行。你可以通过工具创建、查询和更新真实任务，也可以检索用户上传的文档。用户明确要求记录、安排、提醒、查看或修改任务时调用任务工具。用户问“今天做什么”“今日计划”“帮我安排任务”时，调用 generateDailyPlan。";
 
   if (citations.length === 0) {
     return [
