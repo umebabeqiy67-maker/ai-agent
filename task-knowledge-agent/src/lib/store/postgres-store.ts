@@ -3,6 +3,7 @@ import { chunkText, scoreChunk, tokenize } from "@/lib/store/shared/text";
 import type {
   AppStore,
   StoredChunk,
+  StoredAgentRun,
   StoredConversation,
   StoredDailyPlan,
   StoredDocument,
@@ -104,14 +105,17 @@ export const postgresStore: AppStore = {
   toolCalls: {
     async save(input) {
       const sql = getSql();
+      await ensureAgentRunsSchema();
       const rows = await sql`
-        insert into tool_calls (name, arguments, result, status, error)
+        insert into tool_calls (run_id, name, arguments, result, status, error, duration_ms)
         values (
+          ${input.runId ?? null},
           ${input.name},
           ${JSON.stringify(input.arguments ?? {})}::jsonb,
           ${input.result === undefined ? null : JSON.stringify(input.result)}::jsonb,
           ${input.status},
-          ${input.error ?? null}
+          ${input.error ?? null},
+          ${input.durationMs ?? null}
         )
         returning *
       `;
@@ -120,9 +124,69 @@ export const postgresStore: AppStore = {
     },
     async list() {
       const sql = getSql();
+      await ensureAgentRunsSchema();
       const rows = await sql`select * from tool_calls order by created_at desc`;
 
       return rows.map(mapToolCall);
+    },
+  },
+  agentRuns: {
+    async create(input) {
+      const sql = getSql();
+      await ensureAgentRunsSchema();
+      const rows = await sql`
+        insert into agent_runs (conversation_id, input, model, status)
+        values (${input.conversationId}, ${input.input}, ${input.model}, 'running')
+        returning *
+      `;
+
+      return mapAgentRun(rows[0]);
+    },
+    async complete(input) {
+      const sql = getSql();
+      await ensureAgentRunsSchema();
+      const rows = await sql`
+        update agent_runs
+        set
+          status = ${input.status},
+          output = ${input.output ?? null},
+          error = ${input.error ?? null},
+          duration_ms = ${input.durationMs},
+          completed_at = now()
+        where id = ${input.id}
+        returning *
+      `;
+
+      if (!rows[0]) {
+        throw new Error(`Agent run not found: ${input.id}`);
+      }
+
+      return mapAgentRun(rows[0]);
+    },
+    async list() {
+      const sql = getSql();
+      await ensureAgentRunsSchema();
+      const runRows = await sql`
+        select *
+        from agent_runs
+        order by created_at desc
+        limit 80
+      `;
+      const callRows = await sql`
+        select *
+        from tool_calls
+        where run_id is not null
+        order by created_at asc
+      `;
+      const toolCalls = callRows.map(mapToolCall);
+
+      return runRows.map((row) => {
+        const run = mapAgentRun(row);
+        return {
+          ...run,
+          toolCalls: toolCalls.filter((toolCall) => toolCall.runId === run.id),
+        };
+      });
     },
   },
   documents: {
@@ -299,12 +363,29 @@ function mapTask(row: Record<string, unknown>): StoredTask {
 function mapToolCall(row: Record<string, unknown>): StoredToolCall {
   return {
     id: String(row.id),
+    runId: row.run_id ? String(row.run_id) : undefined,
     name: String(row.name),
     arguments: row.arguments,
     result: row.result ?? undefined,
     status: row.status as StoredToolCall["status"],
     error: row.error ? String(row.error) : undefined,
+    durationMs: row.duration_ms === null || row.duration_ms === undefined ? undefined : Number(row.duration_ms),
     createdAt: toIso(row.created_at),
+  };
+}
+
+function mapAgentRun(row: Record<string, unknown>): StoredAgentRun {
+  return {
+    id: String(row.id),
+    conversationId: String(row.conversation_id),
+    input: String(row.input),
+    model: String(row.model),
+    status: row.status as StoredAgentRun["status"],
+    output: row.output ? String(row.output) : undefined,
+    error: row.error ? String(row.error) : undefined,
+    durationMs: row.duration_ms === null || row.duration_ms === undefined ? undefined : Number(row.duration_ms),
+    createdAt: toIso(row.created_at),
+    completedAt: row.completed_at ? toIso(row.completed_at) : undefined,
   };
 }
 
@@ -359,6 +440,34 @@ async function ensureDailyPlansTable() {
   await sql`
     create index if not exists daily_plans_created_at_idx
     on daily_plans(created_at desc)
+  `;
+}
+
+async function ensureAgentRunsSchema() {
+  const sql = getSql();
+  await sql`
+    create table if not exists agent_runs (
+      id uuid primary key default gen_random_uuid(),
+      conversation_id text not null,
+      input text not null,
+      model text not null,
+      status text not null default 'running' check (status in ('running', 'success', 'error')),
+      output text,
+      error text,
+      duration_ms integer,
+      created_at timestamptz not null default now(),
+      completed_at timestamptz
+    )
+  `;
+  await sql`alter table tool_calls add column if not exists run_id uuid`;
+  await sql`alter table tool_calls add column if not exists duration_ms integer`;
+  await sql`
+    create index if not exists agent_runs_created_at_idx
+    on agent_runs(created_at desc)
+  `;
+  await sql`
+    create index if not exists tool_calls_run_id_idx
+    on tool_calls(run_id)
   `;
 }
 

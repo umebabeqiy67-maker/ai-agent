@@ -32,12 +32,27 @@ create table if not exists tasks (
 
 create table if not exists tool_calls (
   id uuid primary key default gen_random_uuid(),
+  run_id uuid,
   name text not null,
   arguments jsonb not null default '{}'::jsonb,
   result jsonb,
   status text not null check (status in ('success', 'error')),
   error text,
+  duration_ms integer,
   created_at timestamptz not null default now()
+);
+
+create table if not exists agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id text not null,
+  input text not null,
+  model text not null,
+  status text not null default 'running' check (status in ('running', 'success', 'error')),
+  output text,
+  error text,
+  duration_ms integer,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz
 );
 
 create table if not exists documents (
@@ -72,6 +87,8 @@ create table if not exists daily_plans (
 create index if not exists messages_conversation_id_idx on messages(conversation_id);
 create index if not exists tasks_status_idx on tasks(status);
 create index if not exists tool_calls_created_at_idx on tool_calls(created_at desc);
+create index if not exists tool_calls_run_id_idx on tool_calls(run_id);
+create index if not exists agent_runs_created_at_idx on agent_runs(created_at desc);
 create index if not exists document_chunks_document_id_idx on document_chunks(document_id);
 create index if not exists document_chunks_tokens_idx on document_chunks using gin(tokens);
 create index if not exists daily_plans_created_at_idx on daily_plans(created_at desc);

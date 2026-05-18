@@ -165,24 +165,34 @@ export const taskToolDefinitions: ToolDefinition[] = [
   },
 ];
 
-export async function executeTool(name: string, rawArguments: unknown) {
+export async function executeTool(
+  name: string,
+  rawArguments: unknown,
+  options?: { runId?: string },
+) {
+  const startedAt = Date.now();
+
   try {
     const result = await runTool(name, rawArguments);
     await getStore().toolCalls.save({
+      runId: options?.runId,
       name,
       arguments: rawArguments,
       result,
       status: "success",
+      durationMs: Date.now() - startedAt,
     });
 
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown tool error";
     await getStore().toolCalls.save({
+      runId: options?.runId,
       name,
       arguments: rawArguments,
       status: "error",
       error: message,
+      durationMs: Date.now() - startedAt,
     });
 
     throw error;

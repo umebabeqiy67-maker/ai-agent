@@ -35,53 +35,76 @@ async function handlePost(req: Request) {
 
   const conversationId = body.conversationId ?? "default";
   const store = getStore();
-  const citations = await store.documents.search({
-    query: userMessage,
-    topK: 5,
-  });
-
-  await store.chat.appendMessage({
+  const startedAt = Date.now();
+  const run = await store.agentRuns.create({
     conversationId,
-    role: "user",
-    content: userMessage,
+    input: userMessage,
     model,
   });
 
-  const messages: ChatMessage[] = [
-    {
-      role: "system",
-      content: buildSystemPrompt(citations),
-    },
-    ...(body.history ?? []).filter((message) => message.content.trim()),
-    {
+  try {
+    const citations = await store.documents.search({
+      query: userMessage,
+      topK: 5,
+    });
+
+    await store.chat.appendMessage({
+      conversationId,
       role: "user",
       content: userMessage,
-    },
-  ];
+      model,
+    });
 
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return Response.json(
+    const messages: ChatMessage[] = [
       {
-        error:
-          "DEEPSEEK_API_KEY is not configured. LLM tool calling requires a real provider key.",
+        role: "system",
+        content: buildSystemPrompt(citations),
       },
-      { status: 500 },
-    );
+      ...(body.history ?? []).filter((message) => message.content.trim()),
+      {
+        role: "user",
+        content: userMessage,
+      },
+    ];
+
+    if (!process.env.DEEPSEEK_API_KEY) {
+      throw new Error(
+        "DEEPSEEK_API_KEY is not configured. LLM tool calling requires a real provider key.",
+      );
+    }
+
+    const assistantContent = await runLlmToolCalling({
+      model,
+      messages,
+      runId: run.id,
+    });
+
+    await store.chat.appendMessage({
+      conversationId,
+      role: "assistant",
+      content: assistantContent,
+      model,
+    });
+
+    await store.agentRuns.complete({
+      id: run.id,
+      status: "success",
+      output: assistantContent,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return textResponse(assistantContent);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown chat error.";
+    await store.agentRuns.complete({
+      id: run.id,
+      status: "error",
+      error: message,
+      durationMs: Date.now() - startedAt,
+    });
+
+    throw error;
   }
-
-  const assistantContent = await runLlmToolCalling({
-    model,
-    messages,
-  });
-
-  await store.chat.appendMessage({
-    conversationId,
-    role: "assistant",
-    content: assistantContent,
-    model,
-  });
-
-  return textResponse(assistantContent);
 }
 
 function buildSystemPrompt(citations: SearchResult[]) {
@@ -125,9 +148,11 @@ function formatApiError(error: unknown) {
 async function runLlmToolCalling({
   model,
   messages,
+  runId,
 }: {
   model: string;
   messages: ChatMessage[];
+  runId: string;
 }) {
   const provider = createDeepSeekProvider();
   const firstCompletion = await provider.createChatCompletion({
@@ -151,7 +176,7 @@ async function runLlmToolCalling({
   const toolMessages: ChatMessage[] = [];
 
   for (const toolCall of toolCalls) {
-    const toolResult = await executeLlmToolCall(toolCall);
+    const toolResult = await executeLlmToolCall(toolCall, runId);
     toolMessages.push({
       role: "tool",
       tool_call_id: toolCall.id,
@@ -183,9 +208,9 @@ async function runLlmToolCalling({
   return formatToolCallsFallback(toolCalls);
 }
 
-async function executeLlmToolCall(toolCall: ToolCall) {
+async function executeLlmToolCall(toolCall: ToolCall, runId: string) {
   const rawArguments = parseToolArguments(toolCall.function.arguments);
-  return executeTool(toolCall.function.name, rawArguments);
+  return executeTool(toolCall.function.name, rawArguments, { runId });
 }
 
 function textResponse(content: string) {

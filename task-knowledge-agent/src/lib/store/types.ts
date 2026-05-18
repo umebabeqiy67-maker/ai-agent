@@ -32,12 +32,31 @@ export type StoredTask = {
 
 export type StoredToolCall = {
   id: string;
+  runId?: string;
   name: string;
   arguments: unknown;
   result?: unknown;
   status: "success" | "error";
   error?: string;
+  durationMs?: number;
   createdAt: string;
+};
+
+export type StoredAgentRun = {
+  id: string;
+  conversationId: string;
+  input: string;
+  model: string;
+  status: "running" | "success" | "error";
+  output?: string;
+  error?: string;
+  durationMs?: number;
+  createdAt: string;
+  completedAt?: string;
+};
+
+export type StoredAgentRunWithToolCalls = StoredAgentRun & {
+  toolCalls: StoredToolCall[];
 };
 
 export type StoredDocument = {
@@ -114,6 +133,21 @@ export type AppStore = {
   toolCalls: {
     save(input: Omit<StoredToolCall, "id" | "createdAt">): Promise<StoredToolCall>;
     list(): Promise<StoredToolCall[]>;
+  };
+  agentRuns: {
+    create(input: {
+      conversationId: string;
+      input: string;
+      model: string;
+    }): Promise<StoredAgentRun>;
+    complete(input: {
+      id: string;
+      status: "success" | "error";
+      output?: string;
+      error?: string;
+      durationMs: number;
+    }): Promise<StoredAgentRun>;
+    list(): Promise<StoredAgentRunWithToolCalls[]>;
   };
   documents: {
     create(input: {

@@ -3,11 +3,13 @@ import path from "node:path";
 
 export type StoredToolCall = {
   id: string;
+  runId?: string;
   name: string;
   arguments: unknown;
   result?: unknown;
   status: "success" | "error";
   error?: string;
+  durationMs?: number;
   createdAt: string;
 };
 

@@ -1,3 +1,4 @@
+import * as agentRunStore from "@/lib/store/agent-run-store";
 import * as chatStore from "@/lib/store/chat-store";
 import * as dailyPlanStore from "@/lib/store/daily-plan-store";
 import * as documentStore from "@/lib/store/document-store";
@@ -18,6 +19,11 @@ export const localStore: AppStore = {
   toolCalls: {
     save: toolCallStore.saveToolCall,
     list: toolCallStore.listToolCalls,
+  },
+  agentRuns: {
+    create: agentRunStore.createAgentRun,
+    complete: agentRunStore.completeAgentRun,
+    list: agentRunStore.listAgentRuns,
   },
   documents: {
     create: documentStore.createDocument,
